@@ -71,6 +71,14 @@ public class WeatherActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_weather);
 
+    }
+
+
+    //因为我给weatheractivity设置的启动模式是sigletask，所以从star列表返回后会从onStart开始执行
+    @Override
+    protected void onStart() {
+        super.onStart();
+
         //初始化各控件
         weatherLayout = (ScrollView) findViewById(R.id.weather_layout);
         titleCity = (TextView) findViewById(R.id.title_city);
@@ -105,7 +113,7 @@ public class WeatherActivity extends AppCompatActivity {
         });
 
         //设置关闭搜索框时搜索框不可见（待解决：优化到点击搜索框外搜索框关闭）
-        search_input.setOnCloseListener(new SearchView.OnCloseListener(){
+        search_input.setOnCloseListener(new SearchView.OnCloseListener() {
             @Override
             public boolean onClose() {
                 search_input.setVisibility(View.GONE);
@@ -138,17 +146,17 @@ public class WeatherActivity extends AppCompatActivity {
         //实现关注功能
         //从sharePreference取出Weatherid
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        weatherId = prefs.getString("weather_id",null);
+        weatherId = prefs.getString("weather_id", null);
 
         Log.d(TAG, "onCreate:  star " + weatherId);
         star_button = (Button) findViewById(R.id.star_button);
-        starList = LitePal.where("adcode = ?",String.valueOf(weatherId)).find(Star.class);
+        starList = LitePal.where("adcode = ?", String.valueOf(weatherId)).find(Star.class);
         //初始化
         //查询不到，当前adcode未关注，设置star为白色
-        if (starList.size() == 0){
+        if (starList.size() == 0) {
             Log.d(TAG, "onCreate: " + "null");
             star_button.setBackgroundResource(R.drawable.ic_star);
-        }else {
+        } else {
             Log.d(TAG, "onCreate: " + "star");
             //查询到了，当前adcode关注了，设置star为红色
             star_button.setBackgroundResource(R.drawable.ic_star_red);
@@ -160,9 +168,9 @@ public class WeatherActivity extends AppCompatActivity {
             public void onClick(View v) {
                 //从数据库里查询是否存在这个adcode的记录
                 Log.d(TAG, "Star onClick: " + weatherId);
-                starList = LitePal.where("adcode = ?",String.valueOf(weatherId)).find(Star.class);
+                starList = LitePal.where("adcode = ?", String.valueOf(weatherId)).find(Star.class);
                 //查询不到，当前adcode未关注，点击设置star为红色
-                if (starList.size() == 0){
+                if (starList.size() == 0) {
                     star_button.setBackgroundResource(R.drawable.ic_star_red);
 
                     //点击后，把adcode存入到数据库中
@@ -171,37 +179,34 @@ public class WeatherActivity extends AppCompatActivity {
                     star.setName(titleCity.getText().toString());
                     star.save();
 
-                }else {
+                } else {
                     //查询到了，当前adcode关注了，点击设置star为白色
                     star_button.setBackgroundResource(R.drawable.ic_star);
 
                     //点击后，删除数据库的这条adcode记录
-                    LitePal.deleteAll(Star.class,"adcode = " + weatherId);
+                    LitePal.deleteAll(Star.class, "adcode = " + weatherId);
                 }
             }
         });
 
         //点击弹出关注城市列表
-        list_button = (Button)findViewById(R.id.list_button);
+        list_button = (Button) findViewById(R.id.list_button);
         list_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(WeatherActivity.this,StarActivity.class);
+                Intent intent = new Intent(WeatherActivity.this, StarActivity.class);
                 startActivity(intent);
             }
         });
 
 
-
-
-
         //从sharePreference取出Weather和NowWeather
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        String weatherString = prefs.getString("weather",null);
-        String nowWeatherString = prefs.getString("nowWeather",null);
+        String weatherString = prefs.getString("weather", null);
+        String nowWeatherString = prefs.getString("nowWeather", null);
 
         Log.d(TAG, "onCreate: xxxxxxxxxxxxxxxxxxxxxxxxxx");
-        if (weatherString != null && nowWeatherString != null){
+        if (weatherString != null && nowWeatherString != null) {
             //有缓存时直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
             NowWeather nowWeather = Utility.handleNowWeatherResponse(nowWeatherString);
@@ -212,30 +217,34 @@ public class WeatherActivity extends AppCompatActivity {
             showWeatherInfo(weather);
             showNowWeatherInfo(nowWeather);
 
-        }else {
+        } else {
             //无缓存时去服务器查询天气
             weatherId = getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
+            Log.d(TAG, "onStart:  intent " + weatherId);
 
-            //如果不是intent传过来，则通过ip访问，从shanrepref中获取weatherId
-            if (weatherId == null){
-                //访问IP，将adcode存到sharepref中
-                weatherId = requestIp();
-
+            //如果不是intent传过来，从shanrepref中获取weatherId
+            if (weatherId == null) {
                 //从sharePreference取出Weather和NowWeather
-                weatherId = prefs.getString("weather_id",null);
+                weatherId = prefs.getString("weather_id", null);
+                if (weatherId == null){
+                    //如果这是sharepre中为空，说明是程序刚启动
+                    //访问IP，将adcode存到sharepref中
+                    weatherId = requestIp();
+                }else {
+                    Log.d(TAG, "onStart: intent null " + weatherId);
+                    requestWeather(weatherId);
+                    requestNowWeather(weatherId);
+                }
 
-                Log.d(TAG, "onCreate: " + weatherId);
-            }else {
-                //如果intent1传过来不为空，说明是通过切换城市访问的，这时去服务器获取并展示数据
+
+            } else {
+                //如果intent传过来不为空，说明是通过切换城市访问的，这时去服务器获取并展示数据
                 requestWeather(weatherId);
                 requestNowWeather(weatherId);
             }
-
-
-
-
         }
+
 
         //下拉刷新，根据weatheId重新去服务器请求加载到界面
         swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
@@ -243,7 +252,7 @@ public class WeatherActivity extends AppCompatActivity {
             public void onRefresh() {
                 //从sharepref中读取weatherId，为了解决刷新的问题
                 SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this);
-                weatherId = prefs.getString("weather_id",null);
+                weatherId = prefs.getString("weather_id", null);
 
                 Log.d(TAG, "onRefresh: " + weatherId);
                 requestWeather(weatherId);
@@ -254,13 +263,19 @@ public class WeatherActivity extends AppCompatActivity {
         //滑动显示菜单的实现
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         navButton = (Button) findViewById(R.id.nav_button);
-        navButton.setOnClickListener(new View.OnClickListener(){
+        navButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 drawerLayout.openDrawer(GravityCompat.START);
             }
         });
 
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume: -----------xxxxxxxxxxxxxxxx----------------");
     }
 
     //根据请求获取位置信息

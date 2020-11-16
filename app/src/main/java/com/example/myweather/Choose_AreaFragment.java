@@ -25,6 +25,7 @@ import com.example.myweather.R;
 import com.example.myweather.db.City;
 import com.example.myweather.db.County;
 import com.example.myweather.db.Province;
+import com.example.myweather.db.Star;
 import com.example.myweather.gson.Weather;
 import com.example.myweather.util.HttpUtil;
 import com.example.myweather.util.Utility;
@@ -119,13 +120,29 @@ public class Choose_AreaFragment extends Fragment {
                         activity.swipeRefresh.setRefreshing(true);
                         activity.requestWeather(weatherId);
                         activity.requestNowWeather(weatherId);
+
                         Log.d(TAG, "onItemClick: " + weatherId);
+
+                        //切换城市后需要初始化star的状态，因为再选择切换区域后后不会再执行oncreat等生命周期，需要在这里刷新，上面requestWeather同理
+                        Button star_button = activity.findViewById(R.id.star_button);
+                        List<Star> starList = LitePal.where("adcode = ?", String.valueOf(weatherId)).find(Star.class);
+                        //查询不到，当前adcode未关注，设置star为白色
+                        if (starList.size() == 0) {
+                            Log.d(TAG, "onCreate: " + "null");
+                            star_button.setBackgroundResource(R.drawable.ic_star);
+                        } else {
+                            Log.d(TAG, "onCreate: " + "star");
+                            //查询到了，当前adcode关注了，设置star为红色
+                            star_button.setBackgroundResource(R.drawable.ic_star_red);
+
+                        }
 
                     }
 
                 }
             }
         });
+
 
         backButton.setOnClickListener(new View.OnClickListener() {
             @Override
