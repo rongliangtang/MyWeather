@@ -19,6 +19,9 @@ import android.widget.SearchView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.myweather.db.City;
+import com.example.myweather.db.Province;
+import com.example.myweather.db.Star;
 import com.example.myweather.gson.NowWeather;
 import com.example.myweather.gson.Weather;
 import com.example.myweather.gson.ip;
@@ -27,8 +30,10 @@ import com.example.myweather.util.HttpUtil;
 import com.example.myweather.util.Utility;
 
 import org.jetbrains.annotations.NotNull;
+import org.litepal.LitePal;
 
 import java.io.IOException;
+import java.util.List;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -42,6 +47,8 @@ public class WeatherActivity extends AppCompatActivity {
     public Button navButton;
     public Button search_button;
     public SearchView search_input;
+    public Button star_button;
+    public Button list_button;
 
     private ScrollView weatherLayout;
     private TextView titleCity;
@@ -55,6 +62,9 @@ public class WeatherActivity extends AppCompatActivity {
 
 
     private String weatherId;   //把weatheId定义在外部，方便后面刷新更新
+
+    //关注列表
+    private List<Star> starList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -125,9 +135,68 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
 
+        //实现关注功能
+        //从sharePreference取出Weatherid
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        weatherId = prefs.getString("weather_id",null);
+
+        Log.d(TAG, "onCreate:  star " + weatherId);
+        star_button = (Button) findViewById(R.id.star_button);
+        starList = LitePal.where("adcode = ?",String.valueOf(weatherId)).find(Star.class);
+        //初始化
+        //查询不到，当前adcode未关注，设置star为白色
+        if (starList.size() == 0){
+            Log.d(TAG, "onCreate: " + "null");
+            star_button.setBackgroundResource(R.drawable.ic_star);
+        }else {
+            Log.d(TAG, "onCreate: " + "star");
+            //查询到了，当前adcode关注了，设置star为红色
+            star_button.setBackgroundResource(R.drawable.ic_star_red);
+
+        }
+        //点击逻辑
+        star_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //从数据库里查询是否存在这个adcode的记录
+                Log.d(TAG, "Star onClick: " + weatherId);
+                starList = LitePal.where("adcode = ?",String.valueOf(weatherId)).find(Star.class);
+                //查询不到，当前adcode未关注，点击设置star为红色
+                if (starList.size() == 0){
+                    star_button.setBackgroundResource(R.drawable.ic_star_red);
+
+                    //点击后，把adcode存入到数据库中
+                    Star star = new Star();
+                    star.setAdcode(weatherId);
+                    star.setName(titleCity.getText().toString());
+                    star.save();
+
+                }else {
+                    //查询到了，当前adcode关注了，点击设置star为白色
+                    star_button.setBackgroundResource(R.drawable.ic_star);
+
+                    //点击后，删除数据库的这条adcode记录
+                    LitePal.deleteAll(Star.class,"adcode = " + weatherId);
+                }
+            }
+        });
+
+        //点击弹出关注城市列表
+        list_button = (Button)findViewById(R.id.list_button);
+        list_button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(WeatherActivity.this,StarActivity.class);
+                startActivity(intent);
+            }
+        });
+
+
+
+
 
         //从sharePreference取出Weather和NowWeather
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather",null);
         String nowWeatherString = prefs.getString("nowWeather",null);
 

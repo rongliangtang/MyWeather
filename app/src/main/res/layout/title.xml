@@ -38,6 +38,16 @@
             android:layout_gravity="center_vertical"
             android:background="@drawable/ic_star"/>
 
+        <Button
+            android:id="@+id/list_button"
+            android:layout_width="25dp"
+            android:layout_height="25dp"
+            android:layout_marginLeft="10dp"
+            android:layout_alignParentLeft="true"
+            android:layout_centerVertical="true"
+            android:layout_gravity="center_vertical"
+            android:background="@drawable/ic_list"/>
+
     </LinearLayout>
 
     <TextView
